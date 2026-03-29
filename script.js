@@ -16,11 +16,25 @@ const winningConditions = [
     [0, 4, 8], [2, 4, 6]             // Diagonals
 ];
 
+// Update turn indicator text and colour class
+function updateTurnIndicator(text, player) {
+    turnIndicator.innerText = text;
+    turnIndicator.classList.remove('x-turn', 'o-turn');
+    if (player === 'X') turnIndicator.classList.add('x-turn');
+    if (player === 'O') turnIndicator.classList.add('o-turn');
+}
+
+// Render a mark in a cell with the correct player class
+function renderMark(cell, player) {
+    cell.classList.add(player === 'X' ? 'x-cell' : 'o-cell', 'taken');
+    cell.innerHTML = `<span class="pop-animation">${player}</span>`;
+}
+
 // Handle Cell Clicks
 function handleCellClick(e) {
     const cell = e.target.closest('.cell'); // Ensures we target the cell even if the span is clicked
     if (!cell) return;
-    
+
     const index = Array.from(cells).indexOf(cell);
 
     // Prevent move if cell is occupied or game is over
@@ -32,46 +46,43 @@ function handleCellClick(e) {
         currentPlayer: currentPlayer
     });
 
-    // Update board and UI with the animation span
+    // Update board and UI
     board[index] = currentPlayer;
-    cell.innerHTML = `<span class="pop-animation">${currentPlayer}</span>`;
-    
+    renderMark(cell, currentPlayer);
+
     // Check for win or draw
     checkWin();
 }
 
 // Check for Win or Draw
 function checkWin() {
-    let roundWon = false;
-    for (let i = 0; i <= 7; i++) {
-        const winCondition = winningConditions[i];
-        let a = board[winCondition[0]];
-        let b = board[winCondition[1]];
-        let c = board[winCondition[2]];
-        
-        if (a === '' || b === '' || c === '') continue;
-        if (a === b && b === c) {
-            roundWon = true;
+    let winCombo = null;
+
+    for (let i = 0; i < winningConditions.length; i++) {
+        const [a, b, c] = winningConditions[i];
+        if (board[a] === '' || board[b] === '' || board[c] === '') continue;
+        if (board[a] === board[b] && board[b] === board[c]) {
+            winCombo = winningConditions[i];
             break;
         }
     }
 
-    if (roundWon) {
-        turnIndicator.innerText = `Player ${currentPlayer} Wins!`;
+    if (winCombo) {
+        updateTurnIndicator(`Player ${currentPlayer} Wins! 🎉`, null);
+        winCombo.forEach(i => cells[i].classList.add('winner'));
         gameActive = false;
         return;
     }
 
-    let roundDraw = !board.includes('');
-    if (roundDraw) {
-        turnIndicator.innerText = 'Game Ended in a Draw!';
+    if (!board.includes('')) {
+        updateTurnIndicator("It's a Draw! 🤝", null);
         gameActive = false;
         return;
     }
 
     // Switch turns
     currentPlayer = currentPlayer === 'X' ? 'O' : 'X';
-    turnIndicator.innerText = `Player ${currentPlayer}'s Turn`;
+    updateTurnIndicator(`Player ${currentPlayer}'s Turn`, currentPlayer);
 }
 
 // Restart Game
@@ -80,32 +91,40 @@ function restartGame() {
     currentPlayer = 'X';
     gameActive = true;
     history = [];
-    turnIndicator.innerText = `Player ${currentPlayer}'s Turn`;
-    cells.forEach(cell => cell.innerHTML = '');
+    updateTurnIndicator(`Player ${currentPlayer}'s Turn`, currentPlayer);
+    cells.forEach(cell => {
+        cell.innerHTML = '';
+        cell.classList.remove('x-cell', 'o-cell', 'taken', 'winner');
+    });
 }
 
 // Undo Last Move
 function undoMove() {
-    if (history.length === 0) return; 
+    if (history.length === 0) return;
 
     // Pop the last saved state
     const previousState = history.pop();
     board = [...previousState.board];
     currentPlayer = previousState.currentPlayer;
-    gameActive = true; 
-    
-    // Update the UI to reflect the old state
+    gameActive = true;
+
+    // Re-render the entire board from the restored state
     cells.forEach((cell, index) => {
+        cell.classList.remove('x-cell', 'o-cell', 'taken', 'winner');
         if (board[index] !== '') {
-            cell.innerHTML = `<span class="pop-animation">${board[index]}</span>`;
+            renderMark(cell, board[index]);
         } else {
             cell.innerHTML = '';
         }
     });
-    turnIndicator.innerText = `Player ${currentPlayer}'s Turn`;
+
+    updateTurnIndicator(`Player ${currentPlayer}'s Turn`, currentPlayer);
 }
 
 // Event Listeners
 cells.forEach(cell => cell.addEventListener('click', handleCellClick));
 restartBtn.addEventListener('click', restartGame);
 undoBtn.addEventListener('click', undoMove);
+
+// Set initial turn indicator colour on load
+updateTurnIndicator(`Player ${currentPlayer}'s Turn`, currentPlayer);
