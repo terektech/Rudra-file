@@ -1,5 +1,20 @@
 /* Core Setup & Background */
 body {
+    /* Core Setup & Background */
+    margin: 0;
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    
+    /* THE IMPORTANT PART: Insert your image here */
+    background-image: url('bg2.jpg'); 
+    background-size: cover;    /* Forces image to fill screen */
+    background-position: center; /* Centers image */
+    background-attachment: fixed; /* Optional: Stops image scrolling */
+    background-repeat: no-repeat;
+}
     margin: 0;
     min-height: 100vh;
     display: flex;
