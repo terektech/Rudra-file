@@ -1,12 +1,14 @@
+// DOM Elements
 const cells = document.querySelectorAll('.cell');
-const statusText = document.getElementById('statusText');
-const restartBtn = document.getElementById('restartBtn');
-const undoBtn = document.getElementById('undoBtn');
+const turnIndicator = document.querySelector('.turn-indicator');
+const restartBtn = document.querySelector('.restart-btn');
+const undoBtn = document.querySelector('.undo-btn');
 
+// Game State Variables
 let board = ['', '', '', '', '', '', '', '', ''];
 let currentPlayer = 'X';
 let gameActive = true;
-let moveHistory = []; // Keeps track of moves for the Undo feature
+let history = []; // Stores past board states for the undo feature
 
 const winningConditions = [
     [0, 1, 2], [3, 4, 5], [6, 7, 8], // Rows
@@ -14,85 +16,93 @@ const winningConditions = [
     [0, 4, 8], [2, 4, 6]             // Diagonals
 ];
 
-// Handle a cell being clicked
+// Handle Cell Clicks
 function handleCellClick(e) {
-    const cell = e.target;
-    const index = cell.getAttribute('data-index');
+    const cell = e.target.closest('.cell'); // Ensures we target the cell even if the span is clicked
+    if (!cell) return;
+    
+    const index = Array.from(cells).indexOf(cell);
 
+    // Prevent move if cell is occupied or game is over
     if (board[index] !== '' || !gameActive) return;
 
-    // Save move for undo
-    moveHistory.push(index);
+    // Save the current state to history BEFORE making the move
+    history.push({
+        board: [...board],
+        currentPlayer: currentPlayer
+    });
 
-    // Update board and UI
+    // Update board and UI with the animation span
     board[index] = currentPlayer;
-    cell.textContent = currentPlayer;
+    cell.innerHTML = `<span class="pop-animation">${currentPlayer}</span>`;
     
-    // Add the specific class to trigger the CSS color and animation
-    cell.classList.add(currentPlayer === 'X' ? 'player-x' : 'player-o');
-
-    checkWinner();
+    // Check for win or draw
+    checkWin();
 }
 
-// Check if someone won or if it's a draw
-function checkWinner() {
+// Check for Win or Draw
+function checkWin() {
     let roundWon = false;
-
-    for (let i = 0; i < winningConditions.length; i++) {
-        const [a, b, c] = winningConditions[i];
-        if (board[a] && board[a] === board[b] && board[a] === board[c]) {
+    for (let i = 0; i <= 7; i++) {
+        const winCondition = winningConditions[i];
+        let a = board[winCondition[0]];
+        let b = board[winCondition[1]];
+        let c = board[winCondition[2]];
+        
+        if (a === '' || b === '' || c === '') continue;
+        if (a === b && b === c) {
             roundWon = true;
             break;
         }
     }
 
     if (roundWon) {
-        statusText.textContent = `Player ${currentPlayer} Wins!`;
-        statusText.style.color = currentPlayer === 'X' ? '#ef4444' : '#3b82f6';
+        turnIndicator.innerText = `Player ${currentPlayer} Wins!`;
         gameActive = false;
         return;
     }
 
-    if (!board.includes('')) {
-        statusText.textContent = 'Game Ended in a Draw!';
-        statusText.style.color = '#555';
+    let roundDraw = !board.includes('');
+    if (roundDraw) {
+        turnIndicator.innerText = 'Game Ended in a Draw!';
         gameActive = false;
         return;
     }
 
-    // Switch player
+    // Switch turns
     currentPlayer = currentPlayer === 'X' ? 'O' : 'X';
-    statusText.textContent = `Player ${currentPlayer}'s Turn`;
+    turnIndicator.innerText = `Player ${currentPlayer}'s Turn`;
 }
 
-// Restart the game completely
+// Restart Game
 function restartGame() {
     board = ['', '', '', '', '', '', '', '', ''];
     currentPlayer = 'X';
     gameActive = true;
-    moveHistory = [];
-    statusText.textContent = `Player X's Turn`;
-    statusText.style.color = '#555';
-
-    cells.forEach(cell => {
-        cell.textContent = '';
-        cell.classList.remove('player-x', 'player-o');
-    });
+    history = [];
+    turnIndicator.innerText = `Player ${currentPlayer}'s Turn`;
+    cells.forEach(cell => cell.innerHTML = '');
 }
 
-// Undo the last move
+// Undo Last Move
 function undoMove() {
-    if (moveHistory.length === 0 || !gameActive) return;
+    if (history.length === 0) return; 
 
-    const lastMoveIndex = moveHistory.pop();
-    board[lastMoveIndex] = '';
+    // Pop the last saved state
+    const previousState = history.pop();
+    board = [...previousState.board];
+    currentPlayer = previousState.currentPlayer;
+    gameActive = true; 
     
-    const cell = document.querySelector(`.cell[data-index="${lastMoveIndex}"]`);
-    cell.textContent = '';
-    cell.classList.remove('player-x', 'player-o');
-
-    currentPlayer = currentPlayer === 'X' ? 'O' : 'X';
-    statusText.textContent = `Player ${currentPlayer}'s Turn`;
+    // Update the UI to reflect the old state
+    cells.forEach((cell, index) => {
+        if (board[index] !== '') {
+            cell.innerHTML = `<span class="pop-animation">${board[index]}</span>`;
+        } else {
+            cell.innerHTML = '';
+        }
+    });
+    turnIndicator.innerText = `Player ${currentPlayer}'s Turn`;
 }
 
 // Event Listeners
